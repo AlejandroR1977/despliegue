@@ -19,12 +19,10 @@ app.use('/trcp', createExpressMiddleware({
     createContext: createContext
 }))
 
-// Configurar la carpeta pública
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(path.resolve(), "public")));
 
-// Ruta para el index
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.get('*', (req, res) => {
+  return res.sendFile(path.join(path.resolve(), "public", "index.html"))
+})
 
 app.get('/app', (_,res) => res.send('Hello'))
