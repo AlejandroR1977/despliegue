@@ -1,50 +1,63 @@
 import { t } from '../trpc/init'
 import { prisma } from '../prisma.init'
 import { z } from 'zod'
+import { ProductQueryResult } from '../schemas/products.schema'
 
-const types = ['BEBIDAS', 'DOGOS', 'HAMBURGUESAS', 'ENSALADAS', 'PAPAS', 'DULCES'] as const
-const typesSchema = z.enum(types)
 
 export const productsRouter = t.router({
-    getProducts:
-
-        t.procedure.input(
-
-            z.object({
-                type: z.optional(typesSchema)
-            })
-        )
-
-            .query(async (opts) => {
-                let rawProducts
-                if (opts.input.type?.length) {
-                    rawProducts = await prisma.products.findMany(
-                        {
-                            where: {
-                                type: opts.input.type as z.infer<typeof typesSchema>
-                            }
-                        }
-                    )
-                } else {
-                    rawProducts = await prisma.products.findMany()
+    getProducts: t.procedure
+        // .output(z.promise(z.array(ProductQueryResult)))
+        .query(async () => {
+            const products = await prisma.products.findMany({
+                include: {
+                    product_types: true
                 }
-
-                const parseProducts = rawProducts.map((product => ({
-                    ...product,
-                    product_id: product.product_id.toString()
-                })))
-
-                return parseProducts
-            }),
-    getProduct: t.procedure
-            .input(z.number().or(z.string()))
-            .query(async ({input}) => {
-                
-                let productId = typeof input == 'string'? BigInt(input) : input
-
-                const product = await prisma.products.findUnique({where: {product_id: productId}})
-
-                return product
                 
             })
+
+            return products.map((product) => {
+                return {
+                    product_id: product.product_id.toString(),
+                    name: product.name,
+                    description: product.description,
+                    price: product.price,
+                    product_type_id: product.product_types!.product_type_id,
+                    image_path: product.image_path,
+                    type: {
+                            product_type_id: product.product_types!.product_type_id!,
+                            name: product.product_types!.name,
+                            preparation_time: product.product_types!.preparation_time
+                        }
+                        
+                }
+            })
+
+        }),
+    getProduct: t.procedure
+        .input(z.object({id: z.string().or(z.number())}))
+        .output(z.promise(ProductQueryResult.or(z.null())))
+        .query(async ({input}) => {
+            const value = BigInt(input.id)
+            const product = await prisma.products.findFirst({where: {product_id: value}, include: {product_types: true}})
+
+            if(!product) return null
+
+            return {
+                product_id: product.product_id.toString(),
+                name: product.name,
+                description: product.description,
+                price: product.price,
+                product_type_id: product.product_types!.product_type_id,
+                image_path: product.image_path,
+                type: {
+                        product_type_id: product.product_types!.product_type_id!,
+                        name: product.product_types!.name,
+                        preparation_time: product.product_types!.preparation_time
+                    }
+                    
+            }
+        })
+ 
+                
+            
 })

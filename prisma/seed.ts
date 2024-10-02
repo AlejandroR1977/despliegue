@@ -1,16 +1,20 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { hashSHA256Hex } from "../src/utils/hash";
-import { ProductCreation } from "../src/types/Product.type";
+import { ProductCreation, ProductTypeCreation } from "../src/types/Product.type";
+import { CustomizationPerProductTypeCreation, CustomizationTypeCreation } from "../src/types/Customizations.type";
 
 const prisma = new PrismaClient()
 
 async function main (){
-    if(! await prisma.products.count() && process.env.MODE != 'PROD'){
-        console.log('Inserting products')
+    if(!await prisma.product_types.count()){
+        await productTypes()
+    }
+    
+    if(!await prisma.products.count()){
         await products()
     }
 
-    if (! await prisma.users.count()) {
+    if (!await prisma.users.count()) {
         console.log('Inserting users')
         await users()
     }
@@ -28,100 +32,142 @@ async function users(){
         hashed_password: await hashSHA256Hex('contrasena')
     }})
 }
+const tiposProducto: ProductTypeCreation[] = [
+    { name: 'Hot dogs', preparation_time: 4 },
+    { name: 'Papas', preparation_time: 5 },
+    { name: 'Ensaladas', preparation_time: 5 },
+    { name: 'Hamburguesas', preparation_time: 12 },
+    { name: 'Bebidas', preparation_time: 0 },
+    { name: 'Dulces', preparation_time: 0 },
+    { name: 'Aperitivos', preparation_time: 0 }
+]
 
+const customizacionesPorTipo: CustomizationTypeCreation[] = [
+    {name: 'Sin tomate'},
+    {name: 'Sin lechuga'},
+    {name: 'Sin chorizo'},
+    {name: 'Sin mayonesa'},
+    {name: 'Sin cebolla'},
+    {name: 'Sin mantequilla'},
+    {name: 'Sin aguacate'}
+]
+
+const customizationesPorTipoDeProducto: CustomizationPerProductTypeCreation[] = [
+    {customization_type_id: 1, product_type_id: 1},
+    {customization_type_id: 2, product_type_id: 1},
+    {customization_type_id: 3, product_type_id: 1},
+    {customization_type_id: 4, product_type_id: 1},
+    {customization_type_id: 5, product_type_id: 1},
+    {customization_type_id: 1, product_type_id: 2},
+    {customization_type_id: 2, product_type_id: 2},
+    {customization_type_id: 3, product_type_id: 2},
+    {customization_type_id: 4, product_type_id: 2},
+    {customization_type_id: 5, product_type_id: 2},
+    {customization_type_id: 1, product_type_id: 3},
+    {customization_type_id: 2, product_type_id: 3},
+    {customization_type_id: 3, product_type_id: 3},
+    {customization_type_id: 4, product_type_id: 3},
+    {customization_type_id: 5, product_type_id: 3},
+    {customization_type_id: 1, product_type_id: 4},
+    {customization_type_id: 2, product_type_id: 4},
+    {customization_type_id: 4, product_type_id: 4},
+    {customization_type_id: 5, product_type_id: 4},
+    {customization_type_id: 6, product_type_id: 4},
+    {customization_type_id: 7, product_type_id: 4}
+]
 
 const dogos: ProductCreation[] = [
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Sencillo',
         description: 'Un winnie rosarito',
         price: 40,
     },
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Doble',
         description: 'Dos winnie rosarito',
         price: 45,
     },
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Sencillo con papas',
         description: 'Un winnie rosarito y papas a un lado',
         price: 50,
     },
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Doble con papas',
         description: 'Un winnie rosarito y papas a un lado',
         price: 55,
     },
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Jumbo',
-        description: 'Un winisote jumbo',
+        description: 'Un winisote jumbo envuelto en tocino',
         price: 45,
     },
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Jumbo con papas',
-        description: 'Un winisote jumbo con papas',
+        description: 'Un winisote jumbo envuelto en tocino con papas',
         price: 55,
     },
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Momia',
-        description: 'Un winisote con tortilla',
+        description: 'Un winisote con tortilla envuelto en tocino',
         price: 50,
     },
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Jumbo momia con papas',
-        description: 'Un winisote con tortilla y papas',
+        description: 'Un winisote con tortilla envuelto en tocino con papas',
         price: 60,
     },
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Hungaro',
-        description: 'Un winisote con tortilla y papas',
+        description: 'Un winisote envuelto en chile verde y tocino',
         price: 55,
     },
     {
-        type: "DOGOS",
+        type: 1,
         name: 'Hungaro con papas',
-        description: 'Un winisote con tortilla y papas',
+        description: 'Un winisote envuelto en chile verde y tocino con papas',
         price: 65,
     }
 ]
 
 const salchipapas: ProductCreation[] = [
     {
-        type: "PAPAS",
+        type: 2,
         name: "Salchipapas sencilla",
-        description: "400g",
+        description: "Orden de papas con salchicha del tipo seleccionado con tomate, chorizo, lechuga por defecto",
         price: 50,
     },
     {
-        type: "PAPAS",
+        type: 2,
         name: "Salchipapas doble",
-        description: "400g",
+        description: "Orden de papas con salchicha del tipo seleccionado con tomate, chorizo, lechuga por defecto",
         price: 55,
     },
     {
-        type: "PAPAS",
+        type: 2,
         name: "Salchipapas jumbo",
-        description: "400g",
+        description: "Orden de papas con salchicha del tipo seleccionado con tomate, chorizo, lechuga por defecto",
         price: 55,
     },
     {
-        type: "PAPAS",
+        type: 2,
         name: "Salchipapas momia",
-        description: "400g",
+        description: "Orden de papas con salchicha del tipo seleccionado con tomate, chorizo, lechuga por defecto",
         price: 60,
     },
     {
-        type: "PAPAS",
+        type: 2,
         name: "Salchipapas húngaro",
-        description: "400g",
+        description: "Orden de papas con salchicha del tipo seleccionado con tomate, chorizo, lechuga por defecto",
         price: 65,
     },
 
@@ -129,25 +175,25 @@ const salchipapas: ProductCreation[] = [
 
 const hamburguesas: ProductCreation[] = [
     {
-        type: "HAMBURGUESAS",
+        type: 4,
         name: "Sencilla",
         description: "Pan con ajonjolí, tomate, cebolla y aguacate",
         price: 75,
     },
     {
-        type: "HAMBURGUESAS",
+        type: 4,
         name: "Doble",
         description: "Pan con ajonjolí, tomate, cebolla, aguacate y doble carne",
         price: 85,
     },
     {
-        type: "HAMBURGUESAS",
+        type: 4,
         name: "Mexicana",
-        description: "Pan con ajonjolí, tomate, cebolla, aguacate, frijoles y jalapeño",
+        description: "Pan con ajonjolí, tomate, cebolla, aguacate, tocino y chile verde",
         price: 85,
     },
     {
-        type: "HAMBURGUESAS",
+        type: 4,
         name: "Arrachera",
         description: "Pan con ajonjolí, tomate, cebolla, aguacate y carne arrachera",
         price: 85,
@@ -156,75 +202,75 @@ const hamburguesas: ProductCreation[] = [
 
 const ensaladas: ProductCreation[] = [
     {
-        type: "ENSALADAS",
+        type: 3,
         name: "Ensalada sencilla",
         description: "400g",
         price: 40,
     },
     {
-        type: "ENSALADAS",
+        type: 3,
         name: "Ensalada jumbo",
-        description: "400g",
+        description: "Salchicha del tipo seleccionado picada con tomate, chorizo, lechuga, mayonesa y cebolla por defecto",
         price: 45,
     },
     {
-        type: "ENSALADAS",
+        type: 3,
         name: "Ensalada momia",
-        description: "400g",
+        description: "Salchicha del tipo seleccionado picada con tomate, chorizo, lechuga, mayonesa y cebolla por defecto",
         price: 50,
     },
     {
-        type: "ENSALADAS",
+        type: 3,
         name: "Ensalada húngara",
-        description: "400g",
+        description: "Salchicha del tipo seleccionado picada con tomate, chorizo, lechuga, mayonesa y cebolla por defecto",
         price: 55,
     }
 ]
 
 const salchichasYEnrrollados: ProductCreation[] = [
     {
-        type: "DOGOS",
+        type: 7,
         name: "Salchicha sencilla",
-        description: "400g",
+        description: "Salchicha del tipo seleccionado",
         price: 10,
     },
     {
-        type: "DOGOS",
-        name: "Chile relleno",
-        description: "400g",
-        price: 25,
-    },
-    {
-        type: "DOGOS",
+        type: 7,
         name: "Salchicha jumbo",
-        description: "400g",
+        description: "Salchicha del tipo seleccionado",
         price: 25,
     },
     {
-        type: "DOGOS",
+        type: 7,
         name: "Salchicha momia",
-        description: "400g",
+        description: "Salchicha del tipo seleccionado",
         price: 30,
     },
     {
-        type: "DOGOS",
+        type: 7,
         name: "Salchicha húngara",
-        description: "400g",
+        description: "Salchicha del tipo seleccionado",
         price: 40,
     },
+    {
+        type: 7,
+        name: "Chile relleno",
+        description: "Chile toreado envuelto en tocino y relleno de quesito chihuahua 🫦",
+        price: 25,
+    }
 ]
 
 const papas: ProductCreation[] = [
     {
-        type: "PAPAS",
+        type: 2,
         name: "Media orden de papas",
-        description: "400g",
+        description: "150g de papas",
         price: 30,
     },
     {
-        type: "PAPAS",
+        type: 2,
         name: "Orden de papas",
-        description: "900g",
+        description: "350g de papas",
         price: 40,
     }
 
@@ -232,103 +278,103 @@ const papas: ProductCreation[] = [
 
 const refrescos: ProductCreation[] = [
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Coca-Cola de vidrio",
         description: "500 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Fanta naranja vidrio",
         description: "500 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Sprite vidrio",
         description: "500 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Coca-Cola plástico",
         description: "600 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Fanta naranja plástico",
         description: "600 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Sprite plástico",
         description: "600 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Coca-Cola plástico",
         description: "400 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Fanta naranja plástico",
         description: "400 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Sprite plástico",
         description: "400 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Arizona",
         description: "680 ml",
         price: 25,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Fuze Tea",
         description: "500 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Bida",
         description: "500 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Bida",
         description: "250 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Horchata",
         description: "1 L",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "PowerAde",
         description: "600 ml",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "PowerAde",
         description: "1 L",
         price: 20,
     },
     {
-        type: "BEBIDAS",
+        type: 5,
         name: "Agua",
         description: "1 L",
         price: 20,
@@ -339,6 +385,28 @@ const refrescos: ProductCreation[] = [
 
 
 ]
+
+async function productTypes(){
+    console.log('Inserting product types')
+    await prisma.product_types.createMany({
+        data: tiposProducto
+    })
+    console.log('Product types inserted')
+    
+    
+    console.log('Inserting customization types')
+    await prisma.customization_types.createMany({
+        data: customizacionesPorTipo
+    })
+    console.log('Customization types inserted')
+    
+    console.log('Inserting customizations per product type')
+    await prisma.customization_types_for_product_type.createMany({
+        data: customizationesPorTipoDeProducto
+    })
+    console.log('Customizations per product types inserted')
+}
+
 
 async function products(){
 
@@ -352,13 +420,11 @@ async function products(){
         ...refrescos
     ]
 
-    
-
+    console.log('Inserting products')
     await prisma.products.createMany({
-        data: [
-            ...products
-        ]
+        data: products
     })
+    console.log('Products inserted')
 }
 
 

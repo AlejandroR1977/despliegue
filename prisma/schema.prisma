@@ -7,13 +7,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model customizations {
-  order_item_id Int
-  order_id      BigInt
-  customization customizations_customization
-  order_items   order_items                  @relation(fields: [order_item_id, order_id], references: [order_item_id, order_id], onDelete: NoAction, onUpdate: NoAction, map: "customizations_ibfk_1")
+model customization_types {
+  customization_id                     Int                                    @id @default(autoincrement())
+  name                                 String                                 @db.VarChar(50)
+  customization_types_for_product_type customization_types_for_product_type[]
+  item_customizations                  item_customizations[]
+}
 
-  @@id([order_item_id, order_id, customization])
+model customization_types_for_product_type {
+  customization_type_id Int
+  product_type_id       Int
+  customization_types   customization_types @relation(fields: [customization_type_id], references: [customization_id], onDelete: NoAction, onUpdate: NoAction, map: "customization_types_for_product_type_ibfk_1")
+  product_types         product_types       @relation(fields: [product_type_id], references: [product_type_id], onDelete: NoAction, onUpdate: NoAction, map: "customization_types_for_product_type_ibfk_2")
+
+  @@id([customization_type_id, product_type_id])
+  @@index([product_type_id], map: "product_type_id")
+}
+
+model item_customizations {
+  order_item_id         Int
+  order_id              BigInt
+  customization_type_id Int
+  order_items           order_items         @relation(fields: [order_item_id, order_id], references: [order_item_id, order_id], onDelete: NoAction, onUpdate: NoAction, map: "item_customizations_ibfk_1")
+  customization_types   customization_types @relation(fields: [customization_type_id], references: [customization_id], onDelete: NoAction, onUpdate: NoAction, map: "item_customizations_ibfk_2")
+
+  @@id([order_item_id, order_id, customization_type_id])
+  @@index([customization_type_id], map: "customization_type_id")
 }
 
 model order_items {
@@ -22,11 +41,13 @@ model order_items {
   order_id               BigInt
   quantity               Int
   price_at_time_of_order Float
-  customizations         customizations[]
-  products               products?        @relation(fields: [product_id], references: [product_id], onDelete: NoAction, onUpdate: NoAction, map: "order_items_ibfk_1")
-  orders                 orders           @relation(fields: [order_id], references: [order_id], onDelete: NoAction, onUpdate: NoAction, map: "order_items_ibfk_2")
+  date_time              DateTime              @db.DateTime(0)
+  item_customizations    item_customizations[]
+  products               products?             @relation(fields: [product_id], references: [product_id], onDelete: NoAction, onUpdate: NoAction, map: "order_items_ibfk_1")
+  orders                 orders                @relation(fields: [order_id], references: [order_id], onDelete: NoAction, onUpdate: NoAction, map: "order_items_ibfk_2")
 
   @@id([order_item_id, order_id])
+  @@unique([order_item_id, order_id], map: "order_items_index_0")
   @@index([order_id], map: "order_id")
   @@index([product_id], map: "product_id")
 }
@@ -35,8 +56,9 @@ model orders {
   order_id     BigInt        @id @default(autoincrement())
   status       orders_status @default(PENDING)
   user_id      BigInt
-  order_date   DateTime      @db.DateTime(0)
+  order_time   DateTime      @db.DateTime(0)
   pickup_time  DateTime      @db.DateTime(0)
+  cc_datetime  DateTime?     @db.DateTime(0)
   total_amount Float
   deleted      Boolean?      @default(false)
   order_items  order_items[]
@@ -45,15 +67,28 @@ model orders {
   @@index([user_id], map: "user_id")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model product_types {
+  product_type_id                      Int                                    @id @default(autoincrement())
+  name                                 String                                 @db.VarChar(50)
+  preparation_time                     Int
+  customization_types_for_product_type customization_types_for_product_type[]
+  products                             products[]
+}
+
 model products {
-  product_id  BigInt        @id @default(autoincrement())
-  name        String        @db.VarChar(100)
-  description String?       @db.VarChar(512)
-  price       Float
-  available   Boolean?      @default(true)
-  type        products_type
-  deleted     Boolean?      @default(false)
-  order_items order_items[]
+  product_id    BigInt         @id @default(autoincrement())
+  name          String         @db.VarChar(100)
+  description   String?        @db.VarChar(512)
+  price         Float
+  available     Boolean?       @default(true)
+  type          Int?
+  image_path    String?        @db.VarChar(255)
+  deleted       Boolean?       @default(false)
+  order_items   order_items[]
+  product_types product_types? @relation(fields: [type], references: [product_type_id], onDelete: NoAction, onUpdate: NoAction, map: "products_ibfk_1")
+
+  @@index([type], map: "type")
 }
 
 model users {
@@ -75,25 +110,8 @@ enum orders_status {
   CANCELED
 }
 
-enum customizations_customization {
-  TOMATE
-  LECHUGA
-  MAYONESA
-  CEBOLLA
-  CHORIZO
-}
-
 enum users_role {
   GUEST
   ADMIN
   USER
-}
-
-enum products_type {
-  BEBIDAS
-  DOGOS
-  HAMBURGUESAS
-  ENSALADAS
-  PAPAS
-  DULCES
 }

@@ -1,7 +1,15 @@
 import { t } from '../trpc/init'
 import { prisma } from '../prisma.init'
-import { CreateOrderSchema, FindOrderSchema } from '../schemas/orders.schema'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
+import { CreateOrderSchema, StatusOrderSchema } from '../schemas/orders.schema'
+import { TRPCError } from '@trpc/server'
+import { OrderItemEvaluator } from '../orders/order_items_evaluation/OrderItemsEvaluator'
+import { areValidCustomizations } from '../orders/order_items_evaluation/evaluators/areValidCustomizations'
+import { isExistentProduct } from '../orders/order_items_evaluation/evaluators/isExistentProduct'
+import { SingleItemEvaluationError } from '../orders/order_items_evaluation/errors/ItemEvaluationError'
+import { mergeRepeatedCustomizations } from '../orders/order_items_evaluation/transformers/mergeRepeatedCustomizations'
+import { toSalchichaIfEnsaladaDoesNotContainAnything } from '../orders/order_items_evaluation/transformers/toSalchichaIfEnsaladaDoesNotContainAnything'
+import { getOrderMiddleware } from '../orders/middlewares/getOrder.middleware'
+import { z } from 'zod'
 
 
 
@@ -11,110 +19,202 @@ export const ordersRouter = t.router({
     )
         .mutation(async ({ input }) => {
 
-            const totalOrderAmount = input.items.reduce((prev, curr) => {
+            const user = await prisma.users.getUserById(input.user_id)
 
-                return prev + (curr.price_at_time_of_order * curr.quantity)
-            },0)
+            if(!user) {
+                throw new TRPCError({
+                    code: 'NOT_FOUND',
+                    message: 'Non existent user',
+                    cause: 'user_id'
+                })
+            }
 
-
-            
+            const orderItemEvaluator = new OrderItemEvaluator(input.items)
+            orderItemEvaluator.addSingleEvaluation(isExistentProduct)
+            orderItemEvaluator.addSingleEvaluation(areValidCustomizations)
+            orderItemEvaluator.addSetTransformation(mergeRepeatedCustomizations)
+            orderItemEvaluator.addSingleTransformation(toSalchichaIfEnsaladaDoesNotContainAnything)
             try {
+                await orderItemEvaluator.eval()
+
+
+                let totalAmount = 0
+                let pickupTime = 0
+
+                let parsedItems = []
+                const orderDate = new Date(input.order_time)
+
+                for (let i = 0; i < orderItemEvaluator.items.length; i++) {
+                    const product = await prisma.products.findFirst({
+                        where: {
+                            product_id: orderItemEvaluator.items[i].product_id
+                        },
+                        include: {
+                            product_types: true
+                        }
+                    })
+
+                    totalAmount += product!.price
+                    pickupTime += product!.product_types!.preparation_time
+
+                    parsedItems.push({
+                        date_time: orderDate,
+                        order_item_id: i + 1,
+                        price_at_time_of_order: product!.price,
+                        quantity: orderItemEvaluator.items[i].quantity,
+                        product_id: orderItemEvaluator.items[i].product_id,
+                        item_customizations: {
+                            create: orderItemEvaluator.items[i].customizations?.map((customization_type_id) => ({customization_type_id}))
+                        }
+                    })
+
+                }
+                const pickupDate = new Date(input.order_time)
+                pickupDate.setMinutes(pickupDate.getMinutes() + pickupTime)
+
+                
                 const order = await prisma.orders.create({
                     data: {
+                        order_time: orderDate,
+                        pickup_time: pickupDate,
                         user_id: input.user_id,
-                        order_date: input.order_date,
-                        pickup_time: input.pickup_time,
-                        total_amount: totalOrderAmount,
-                        
-                        
+                        total_amount: totalAmount,
                         order_items: {
-                            create: [
-                                ...input.items.map((item, index) => {
-              
-                                    return (
-                                        {
-                                            order_item_id: index,
-                                            price_at_time_of_order: item.price_at_time_of_order,
-                                            quantity: item.quantity,
-                                            product_id: item.product_id,
-                                            customizations: {
-                                                create: item.customizations?.map((customization) => ({customization}))
-                                            }
-                                        }
-                                    )
-
-                                }),
-
-                            ]
+                            create: parsedItems
                         }
                     }
                 })
-                return order
+
+                const orderString = JSON.stringify(order, ( index, value) => {
+                    if (typeof value == 'bigint'){
+                        index
+                        return value.toString()
+                    }
+                    return value
+                },2)
+
+
+
+                return JSON.parse(orderString)
+                
             } catch (error) {
 
-                if(error instanceof PrismaClientKnownRequestError){
-                    return {
-                        error: 'Invalid data',
-                        field: error.meta?.field_name
-                    }
-                }
+                console.error(error)
                 
-                return error
+                if (error instanceof SingleItemEvaluationError){
+                    let code: ConstructorParameters<typeof TRPCError>[0]['code']
+
+                    switch(error.type){
+                        case 'resource_not_found':
+                            code = 'NOT_FOUND'
+                        break;
+                        case 'inconsistent':
+                            code = 'CONFLICT'
+                        break;
+                        default:
+                            code = 'UNPROCESSABLE_CONTENT'
+                    }
+                    
+                    
+                    throw new TRPCError({
+                        code,
+                        message: `${error.key} - ${error.message}`
+                    })
+                }
+
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR'
+                })
             }
+        
 
         }),
-        getOrders: t.procedure
-            .input(FindOrderSchema)
+        getOrdersWithItems: t.procedure
+            .input(z.object({
+                status: StatusOrderSchema.shape.status.or(z.literal('all'))
+            }))
+            // .output(z.promise(QueryOrderResultWithItemsArray))
             .query(async ({input}) => {
+                const include = prisma.orders.getWholeOrderInclude()
 
-            const include = {
-                order_items: {
-                    include: {
-                        products: true,
-                        customizations: true
-                    }
-                },
-                users: true
-            }
-
-            let result
-            
-            if(input.status){
-                result = await prisma.orders.findMany({
-                    where: {status: input.status},
+                const orders = await prisma.orders.findMany({
+                    where: input.status != 'all' ? {
+                        status: input.status
+                    }: undefined,
                     include
                 })
-            }
-            else {
-                result = await prisma.orders.findMany({
-                    include
-                })
-            }
-
-            const parsedResults = result.map((order) => {
-                return {
-                    ...order,
-                    order_id: order.order_id.toString(),
-                    user_id: order.user_id.toString(),
-                    order_items: order.order_items.map((item) => {
-                        return {
-                            ...item,
-                            order_id: item.order_id.toString(),
-                            product_id: item.product_id?.toString(),
-                            customizations: item.customizations.map(customization => customization.customization),
-                            products: {
-                                ...item.products,
-                                product_id: item.products?.product_id.toString()
+                
+                
+                const parsedOrders = orders.map(order => {
+                    return {
+                        order_id: order.order_id.toString(),
+                        status: order.status,
+                        total_amount: order.total_amount,
+                        order_time: order.order_time,
+                        pickup_time: order.pickup_time,
+                        cc_datetime: order.cc_datetime,
+                        user: {
+                            user_id: order.user_id.toString(),
+                            username: order.users.username,
+                            email: order.users.email,
+                            role: order.users.role,
+                            phone_number: order.users.phone_number
+                        },
+                        items: order.order_items.map(item =>{
+                            return {
+                                order_item_id: item.order_item_id,
+                                price_at_time_of_order: item.price_at_time_of_order,
+                                quantity: item.quantity,
+                                product_name: item.products!.name,
+                                product_id: item.product_id!.toString(),
+                                product_type: item.products!.product_types!.name,
+                                product_type_id: item.products!.product_types!.product_type_id,
+                                customizations: item.item_customizations.map((customization) => {
+                                    return {
+                                        customization_id: customization.customization_types!.customization_id,
+                                        name: customization.customization_types!.name
+                                    }
+                                })
                             }
-                        }
-                    }),
-                    users: {
-                        ...order.users,
-                        user_id: order.user_id.toString()
+                        })
                     }
-                }
-            })
+                })
 
-            return parsedResults
-        })
+                
+
+                return parsedOrders
+            }),
+        
+        changeOrderStatus: t.procedure
+            .input(z.object({
+                order_id: z.string().or(z.number().int()),
+                status: StatusOrderSchema.shape.status
+            }))
+            .use(getOrderMiddleware)
+            .mutation(async ({ctx, input}) => {
+                let order = ctx.order
+                if(input.status != ctx.order.status){
+                    await prisma.orders.update({
+                        where: {
+                            order_id: order.order_id
+                        },
+                        data: {
+                            status: input.status
+                        }
+                    })
+                }
+
+                if(!ctx.order.cc_datetime){
+                    await prisma.orders.update({
+                        where: {
+                            order_id: order.order_id
+                        },
+                        data: {
+                            cc_datetime: new Date()
+                        }
+                    })
+                }
+
+                return input.status
+            })
 })

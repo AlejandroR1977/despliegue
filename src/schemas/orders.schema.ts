@@ -1,31 +1,56 @@
 import { z } from "zod";
 
-const customizations =   ['TOMATE','LECHUGA','MAYONESA','CEBOLLA','CHORIZO'] as const
 
 const orderStatus =   ['PENDING','IN_PROCESS','READY','DELIVERED','CANCELED'] as const
 
+export const CreateItemSchema = z.object({
+    quantity: z.number().int('quantity must be an integer'),
+    product_id: z.number().int('product id must be an integer'),
+    customizations: z.optional(z.array(z.number().int('customization id is an int')))
+})
+
 export const CreateOrderSchema = z.object({
     user_id: z.number().or(z.bigint()),
-    order_date: z.date().or(z.string()),
+    order_time: z.date().or(z.string()),
     pickup_time: z.date().or(z.string()),
-    items: z.array(z.object({
-        price_at_time_of_order: z.number(),
-        quantity: z.number().int('quantity must be an integer'),
-        product_id: z.number().int('product id must be an integer'),
-        customizations: z.optional(z.array(z.enum(customizations)))
-    }))
+    items: z.array(CreateItemSchema)
 
 })
 
-export const FindOrderSchema = z.object({
+
+
+export const StatusOrderSchema = z.object({
     status: z.optional(z.enum(orderStatus)),
-    include: z.array(z.enum(['USERS','ORDER_ITEMS'])).default(['USERS', 'ORDER_ITEMS'])
-
 })
 
-export const QueryOrderResult = z.object({
+
+
+export const QueryOrderResultWithItems = z.object({
     order_id: z.string(),
-    items: CreateOrderSchema.shape.items,
-    order_date: CreateOrderSchema.shape.order_date,
-    pickup_time: CreateOrderSchema.shape.pickup_time
+    status: z.string(),
+    total_amount: z.number(),
+    order_time: z.string().or(z.date()),
+    pickup_time: z.string().or(z.date()),
+    user: z.object({
+        user_id: z.string(),
+        username: z.string(),
+        email: z.string(),
+        role: z.string(),
+        phone_number: z.string()
+    }),
+    items: z.array(z.object({
+        order_item_id: z.number(),
+        price_at_time_of_order: z.number(),
+        quantity: z.number(),
+        product_name: z.string(),
+        product_id: z.string(),
+        product_type: z.string(),
+        product_type_id: z.number(),
+        customizations: z.object({
+            customization_id: z.number(),
+            name: z.string()
+        })
+    }))
 })
+
+export const QueryOrderResultWithItemsArray = z.array(QueryOrderResultWithItems)

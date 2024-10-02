@@ -1,5 +1,7 @@
 import z from 'zod'
 
-export const typeProducts = ['BEBIDAS', 'DOGOS', 'DULCES', 'ENSALADAS', 'HAMBURGUESAS', 'PAPAS'] as const
-
-export const TypeProductSchema = z.enum(typeProducts)
+export const TypeProductQuerySchema = z.object({
+  product_type_id: z.number(),
+  name: z.string(),
+  preparation_time: z.number()
+})
