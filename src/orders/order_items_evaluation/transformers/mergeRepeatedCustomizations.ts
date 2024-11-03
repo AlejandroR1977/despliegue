@@ -1,15 +1,15 @@
 import { ItemSetTransformation } from "../OrderItemsEvaluator";
-function hashItem(productId: number, customizations?: number[]){
+function hashItem(productId: number, customizations?: number[]) {
   let customizationsString = ''
-  
+
   if (customizations)
     customizationsString = customizations.sort().join(',')
-  
+
   return `${productId} - (${customizationsString})`
 }
 
-export const mergeRepeatedCustomizations: ItemSetTransformation= {
-  
+export const mergeRepeatedCustomizations: ItemSetTransformation = {
+
   async transform(items) {
 
     const repeatedIndexes: number[] = []
@@ -18,7 +18,7 @@ export const mergeRepeatedCustomizations: ItemSetTransformation= {
       const repeated = items.filter((secondItem) => {
         return hashItem(item.product_id, item.customizations) == hashItem(secondItem.product_id, secondItem.customizations)
       })
-      if(repeated.length > 1){
+      if (repeated.length > 1) {
         repeatedIndexes.push(index)
         repeatedIndexes.push()
 
@@ -32,7 +32,7 @@ export const mergeRepeatedCustomizations: ItemSetTransformation= {
 
       const searchedRepeatedItem = acc.find(item => item.product_id == curr.product_id)
 
-      if(!searchedRepeatedItem)
+      if (!searchedRepeatedItem)
         acc.push(curr)
 
       else {
@@ -42,9 +42,9 @@ export const mergeRepeatedCustomizations: ItemSetTransformation= {
       return acc
     }, [])
 
-    
+
     const finalItems = [...notRepeatedItems, ...mergedItems]
-    
+
     return finalItems
   }
 }

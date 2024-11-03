@@ -12,7 +12,7 @@ export const productsRouter = t.router({
                 include: {
                     product_types: true
                 }
-                
+
             })
 
             return products.map((product) => {
@@ -24,23 +24,23 @@ export const productsRouter = t.router({
                     product_type_id: product.product_types!.product_type_id,
                     image_path: product.image_path,
                     type: {
-                            product_type_id: product.product_types!.product_type_id!,
-                            name: product.product_types!.name,
-                            preparation_time: product.product_types!.preparation_time
-                        }
-                        
+                        product_type_id: product.product_types!.product_type_id!,
+                        name: product.product_types!.name,
+                        preparation_time: product.product_types!.preparation_time
+                    }
+
                 }
             })
 
         }),
     getProduct: t.procedure
-        .input(z.object({id: z.string().or(z.number())}))
+        .input(z.object({ id: z.string().or(z.number()) }))
         .output(z.promise(ProductQueryResult.or(z.null())))
-        .query(async ({input}) => {
+        .query(async ({ input }) => {
             const value = BigInt(input.id)
-            const product = await prisma.products.findFirst({where: {product_id: value}, include: {product_types: true}})
+            const product = await prisma.products.findFirst({ where: { product_id: value }, include: { product_types: true } })
 
-            if(!product) return null
+            if (!product) return null
 
             return {
                 product_id: product.product_id.toString(),
@@ -50,14 +50,14 @@ export const productsRouter = t.router({
                 product_type_id: product.product_types!.product_type_id,
                 image_path: product.image_path,
                 type: {
-                        product_type_id: product.product_types!.product_type_id!,
-                        name: product.product_types!.name,
-                        preparation_time: product.product_types!.preparation_time
-                    }
-                    
+                    product_type_id: product.product_types!.product_type_id!,
+                    name: product.product_types!.name,
+                    preparation_time: product.product_types!.preparation_time
+                }
+
             }
         })
- 
-                
-            
+
+
+
 })

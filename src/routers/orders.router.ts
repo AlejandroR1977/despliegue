@@ -139,7 +139,7 @@ export const ordersRouter = t.router({
                     }
                 })
 
-                const orderString = JSON.stringify(order, (_key, value) => {
+                const orderString = JSON.stringify(order, (_, value) => {
                     if (typeof value == 'bigint') {
                         return value.toString()
                     }

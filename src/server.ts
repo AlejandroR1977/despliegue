@@ -3,9 +3,7 @@ import { createExpressMiddleware } from '@trpc/server/adapters/express'
 import { appRouter } from './routers/app.router'
 import { createContext } from './trpc/context'
 import cors from 'cors'
-//import cookieParser from 'cookie-parser'
-import path from 'node:path'
-
+import cookieParser from 'cookie-parser'
 export const app = express()
 
 app.use(cors({
@@ -13,6 +11,8 @@ app.use(cors({
     credentials: true
 }))
 app.use(express.json())
+app.use(express.static('public'))
+app.use(cookieParser())
 
 
 app.use('/trcp', createExpressMiddleware({
@@ -20,12 +20,6 @@ app.use('/trcp', createExpressMiddleware({
     createContext: createContext
 }))
 
-app.use(express.static(path.join(path.resolve(), "public")));
+app.get('/', (_, res) => res.sendFile('public/index.html'))
 
-app.get('*', (req, res) => {
-  return res.sendFile(path.join(path.resolve(), "public", "index.html"))
-})
-
-app.get('/app', (_,res) => res.send('Hello'))
-
-
+app.get('/app', (_, res) => res.send('Hello'))

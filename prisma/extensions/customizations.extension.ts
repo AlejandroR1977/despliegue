@@ -1,7 +1,5 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../src/prisma.init";
-//import { bigint, custom } from "zod";
-//import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 export const customizationsExtension = Prisma.defineExtension({
   name: 'customization_types',
@@ -9,7 +7,7 @@ export const customizationsExtension = Prisma.defineExtension({
     customization_types: {
       getCustomizationById: async (id: number) => {
 
-        const product = await prisma.customization_types.findFirst({where: {customization_id: id}, include: {customization_types_for_product_type: true}})
+        const product = await prisma.customization_types.findFirst({ where: { customization_id: id }, include: { customization_types_for_product_type: true } })
 
         return product
       },
@@ -35,7 +33,7 @@ export const customizationsExtension = Prisma.defineExtension({
 
 
         if (!product?.type) return []
-        
+
         const customizations = await prisma.customization_types.getCustomizationsByProductTypeId(product.type)
 
         return customizations

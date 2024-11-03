@@ -1,28 +1,27 @@
 import { Prisma } from "@prisma/client";
-//import { prisma } from "../../src/prisma.init";
 
 
 export const ordersExtension = Prisma.defineExtension({
   model: {
     orders: {
-      getWholeOrderInclude(){
+      getWholeOrderInclude() {
         return {
           order_items: {
-              include: {
-                  products: {
-                      include: {
-                          product_types: true,
-                      }
-                  },
-                  item_customizations: {
-                      include: {
-                          customization_types: true
-                      }
-                  }
+            include: {
+              products: {
+                include: {
+                  product_types: true,
+                }
+              },
+              item_customizations: {
+                include: {
+                  customization_types: true
+                }
               }
+            }
           },
           users: true
-      }
+        }
       },
     }
   }
