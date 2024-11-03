@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+//import { prisma } from "../../src/prisma.init";
 
 
 export const ordersExtension = Prisma.defineExtension({

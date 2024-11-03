@@ -3,6 +3,7 @@ import { createExpressMiddleware } from '@trpc/server/adapters/express'
 import { appRouter } from './routers/app.router'
 import { createContext } from './trpc/context'
 import cors from 'cors'
+//import cookieParser from 'cookie-parser'
 import path from 'node:path'
 
 export const app = express()
@@ -26,3 +27,5 @@ app.get('*', (req, res) => {
 })
 
 app.get('/app', (_,res) => res.send('Hello'))
+
+

@@ -1,7 +1,8 @@
 import { z } from "zod";
+//import { CustomizationQueryResult } from "./customizations.schema";
 
 
-const orderStatus =   ['PENDING','IN_PROCESS','READY','DELIVERED','CANCELED'] as const
+const orderStatus = ['PENDING', 'IN_PROCESS', 'READY', 'DELIVERED', 'CANCELED'] as const
 
 export const CreateItemSchema = z.object({
     quantity: z.number().int('quantity must be an integer'),
@@ -10,7 +11,12 @@ export const CreateItemSchema = z.object({
 })
 
 export const CreateOrderSchema = z.object({
-    user_id: z.number().or(z.bigint()),
+    user_id: z.preprocess((val) => {
+        if (typeof val == 'string') {
+            return BigInt(val)
+        }
+        return val
+    }, z.bigint()),
     order_time: z.date().or(z.string()),
     pickup_time: z.date().or(z.string()),
     items: z.array(CreateItemSchema)

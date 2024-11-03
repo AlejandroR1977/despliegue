@@ -5,12 +5,12 @@ import { CustomizationPerProductTypeCreation, CustomizationTypeCreation } from "
 
 const prisma = new PrismaClient()
 
-async function main (){
-    if(!await prisma.product_types.count()){
+async function main() {
+    if (!await prisma.product_types.count()) {
         await productTypes()
     }
-    
-    if(!await prisma.products.count()){
+
+    if (!await prisma.products.count()) {
         await products()
     }
 
@@ -18,19 +18,32 @@ async function main (){
         console.log('Inserting users')
         await users()
     }
-    
-} 
+
+}
 
 
-async function users(){
-    await prisma.users.create({data: {
-        user_id: 1,
-        email: 'some_email@email.com',
-        role: 'ADMIN',
-        username:'admin',
-        phone_number: '6620000000',
-        hashed_password: await hashSHA256Hex('contrasena')
-    }})
+async function users() {
+    await prisma.users.createMany({
+        data: [
+            {
+                user_id: 1,
+                email: 'some_email@email.com',
+                role: 'ADMIN',
+                username: 'admin',
+                phone_number: '6620000000',
+                hashed_password: await hashSHA256Hex('contrasena')
+            },
+            {
+                user_id: 2,
+                email: 'guest@email.com',
+                role: 'GUEST',
+                username: 'guest',
+                phone_number: '6621111111',
+                hashed_password: await hashSHA256Hex('contrasena')
+
+            }
+        ]
+    })
 }
 const tiposProducto: ProductTypeCreation[] = [
     { name: 'Hot dogs', preparation_time: 4 },
@@ -43,37 +56,37 @@ const tiposProducto: ProductTypeCreation[] = [
 ]
 
 const customizacionesPorTipo: CustomizationTypeCreation[] = [
-    {name: 'Sin tomate'},
-    {name: 'Sin lechuga'},
-    {name: 'Sin chorizo'},
-    {name: 'Sin mayonesa'},
-    {name: 'Sin cebolla'},
-    {name: 'Sin mantequilla'},
-    {name: 'Sin aguacate'}
+    { name: 'Sin tomate' },
+    { name: 'Sin lechuga' },
+    { name: 'Sin chorizo' },
+    { name: 'Sin mayonesa' },
+    { name: 'Sin cebolla' },
+    { name: 'Sin mantequilla' },
+    { name: 'Sin aguacate' }
 ]
 
 const customizationesPorTipoDeProducto: CustomizationPerProductTypeCreation[] = [
-    {customization_type_id: 1, product_type_id: 1},
-    {customization_type_id: 2, product_type_id: 1},
-    {customization_type_id: 3, product_type_id: 1},
-    {customization_type_id: 4, product_type_id: 1},
-    {customization_type_id: 5, product_type_id: 1},
-    {customization_type_id: 1, product_type_id: 2},
-    {customization_type_id: 2, product_type_id: 2},
-    {customization_type_id: 3, product_type_id: 2},
-    {customization_type_id: 4, product_type_id: 2},
-    {customization_type_id: 5, product_type_id: 2},
-    {customization_type_id: 1, product_type_id: 3},
-    {customization_type_id: 2, product_type_id: 3},
-    {customization_type_id: 3, product_type_id: 3},
-    {customization_type_id: 4, product_type_id: 3},
-    {customization_type_id: 5, product_type_id: 3},
-    {customization_type_id: 1, product_type_id: 4},
-    {customization_type_id: 2, product_type_id: 4},
-    {customization_type_id: 4, product_type_id: 4},
-    {customization_type_id: 5, product_type_id: 4},
-    {customization_type_id: 6, product_type_id: 4},
-    {customization_type_id: 7, product_type_id: 4}
+    { customization_type_id: 1, product_type_id: 1 },
+    { customization_type_id: 2, product_type_id: 1 },
+    { customization_type_id: 3, product_type_id: 1 },
+    { customization_type_id: 4, product_type_id: 1 },
+    { customization_type_id: 5, product_type_id: 1 },
+    { customization_type_id: 1, product_type_id: 2 },
+    { customization_type_id: 2, product_type_id: 2 },
+    { customization_type_id: 3, product_type_id: 2 },
+    { customization_type_id: 4, product_type_id: 2 },
+    { customization_type_id: 5, product_type_id: 2 },
+    { customization_type_id: 1, product_type_id: 3 },
+    { customization_type_id: 2, product_type_id: 3 },
+    { customization_type_id: 3, product_type_id: 3 },
+    { customization_type_id: 4, product_type_id: 3 },
+    { customization_type_id: 5, product_type_id: 3 },
+    { customization_type_id: 1, product_type_id: 4 },
+    { customization_type_id: 2, product_type_id: 4 },
+    { customization_type_id: 4, product_type_id: 4 },
+    { customization_type_id: 5, product_type_id: 4 },
+    { customization_type_id: 6, product_type_id: 4 },
+    { customization_type_id: 7, product_type_id: 4 }
 ]
 
 const dogos: ProductCreation[] = [
@@ -386,20 +399,20 @@ const refrescos: ProductCreation[] = [
 
 ]
 
-async function productTypes(){
+async function productTypes() {
     console.log('Inserting product types')
     await prisma.product_types.createMany({
         data: tiposProducto
     })
     console.log('Product types inserted')
-    
-    
+
+
     console.log('Inserting customization types')
     await prisma.customization_types.createMany({
         data: customizacionesPorTipo
     })
     console.log('Customization types inserted')
-    
+
     console.log('Inserting customizations per product type')
     await prisma.customization_types_for_product_type.createMany({
         data: customizationesPorTipoDeProducto
@@ -408,7 +421,7 @@ async function productTypes(){
 }
 
 
-async function products(){
+async function products() {
 
     const products = [
         ...dogos,
