@@ -4,7 +4,6 @@ import { t } from "../trpc/init";
 export const customizationsRouter = t.router({
 
   getAllCustomizations: t.procedure
-    // .output(z.promise(z.array(CustomizationQueryResult)))
     .query(async () => {
 
       const customizations = await prisma.customization_types.findMany({
